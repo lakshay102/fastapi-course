@@ -2,7 +2,9 @@ from typing import Optional
 from fastapi import FastAPI, Response, status, HTTPException
 from fastapi.params import Body
 from pydantic import BaseModel
-
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time
 app = FastAPI()
 
 
@@ -12,6 +14,17 @@ class Post(BaseModel):
     published: bool = True
     rating: Optional[int] = None
 
+while True:
+
+    try:
+        conn = psycopg2.connect(host = 'localhost', database = 'fastapi', user = 'postgres', password = 'postgres', cursor_factory= RealDictCursor)
+        cursor = conn.cursor()
+        print("Database connection was successful!")
+        break
+    except Exception as error:
+        print("Connection to database failed")
+        print("Error : ", error)
+        time.sleep(2)
 
 my_posts = [
     {"title": "Title of post 1", "content": "Content of post 1", "id": 1},
@@ -35,17 +48,22 @@ def root():
 
 
 @app.get("/posts")
-def read_posts():
-    return {"data": my_posts}
+def get_posts():
+    cursor.execute(
+        """SELECT * FROM posts"""
+    )
+    posts = cursor.fetchall()
+    print(posts)
+    return {"data": posts}
 
 
 @app.post("/posts", status_code= status.HTTP_201_CREATED)
 def create_post(post: Post):
-    # print(post)
-    # print(post.model_dump())
-    post_dict = post.model_dump()
-    my_posts.append(post_dict)
-    return {"data": post_dict}
+    cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""", (post.title, post.content, post.published))
+
+    new_post = cursor.fetchone()
+    conn.commit()
+    return {"data": new_post}
 
 
 @app.get("/posts/latest")
@@ -56,8 +74,12 @@ def get_latest_post():
 
 @app.get("/posts/{id}")
 def get_post(id: int, response: Response):
-    post = find_post(id)
-    if not post:
+    cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
+    # print(id)
+    fetched_post_data = cursor.fetchone()
+    # print(fetched_post_data)
+    # post = find_post(id)
+    if not fetched_post_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} was not found",
@@ -65,10 +87,13 @@ def get_post(id: int, response: Response):
         # response.status_code = status.HTTP_404_NOT_FOUND
         # return {"message" : f"post with id: {id} was not found"}
     # print(type(id))
-    return {"post_detail": post}
+    return {"post_detail": fetched_post_data}
 
 @app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int):
+    #deleting post
+    # find the index in the array that has required ID 
+    # my_posts.pop(index)
     index = find_index_post(id)
 
     if index == None:
