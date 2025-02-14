@@ -73,45 +73,35 @@ def get_latest_post():
 
 
 @app.get("/posts/{id}")
-def get_post(id: int, response: Response):
+def get_post(id: int):
     cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
-    # print(id)
     fetched_post_data = cursor.fetchone()
-    # print(fetched_post_data)
-    # post = find_post(id)
     if not fetched_post_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} was not found",
         )
-        # response.status_code = status.HTTP_404_NOT_FOUND
-        # return {"message" : f"post with id: {id} was not found"}
-    # print(type(id))
     return {"post_detail": fetched_post_data}
 
 @app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int):
-    #deleting post
-    # find the index in the array that has required ID 
-    # my_posts.pop(index)
-    index = find_index_post(id)
+    cursor.execute("""DELETE from posts WHERE id = %s RETURNING *""", (str(id),))
+    deleted_post = cursor.fetchone()
+    # print(deleted_post)
+    conn.commit()
 
-    if index == None:
+    if deleted_post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail= f"Posts with id: {id} does not exist")
-    my_posts.pop(index)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @app.put("/posts/{id}")
 def update_post(id : int, post: Post):
-    index = find_index_post(id)
+    cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""", (post.title, post.content, post.published, str(id)))
+    updated_post = cursor.fetchone()
+    # print(updated_post)
+    conn.commit()
 
-    if index == None:
+    if updated_post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail= f"Posts with id: {id} does not exist")
     
-    post_dict = post.model_dump()
-
-    post_dict['id'] = id
-    my_posts[index] = post_dict
-    return {"data" : post_dict}
-    # print(post)
-    # return { "message" : "updated post"}
+    return {"data" : updated_post}
