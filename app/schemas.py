@@ -1,6 +1,8 @@
+from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, conint
 from datetime import datetime
+from pydantic.types import conint
 
 class PostBase(BaseModel):
     title: str
@@ -43,3 +45,12 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id : Optional[str] = None
+
+# class Direction(int, Enum):
+#     like_add: 1
+#     like_remove: 0
+
+class Vote(BaseModel):
+    post_id: int
+    dir: conint(le=1)
+    # dir: Direction
