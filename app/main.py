@@ -6,7 +6,7 @@ from app.config import settings
 
 models.Base.metadata.create_all(bind = engine)
 
-app = FastAPI()
+app = FastAPI(title="freeCodeCamp FastAPI Course")
 
 app.include_router(post.router)
 app.include_router(user.router)

@@ -1,9 +1,10 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import func
 from app import models
 from app.database import get_db
 from app.oauth2 import get_current_user
-from app.schemas import Post, PostCreate
+from app.schemas import Post, PostCreate, PostOut
 from sqlalchemy.orm import Session
 
 router = APIRouter(
@@ -11,7 +12,8 @@ router = APIRouter(
     tags= ['Posts']
 )
 
-@router.get("/", response_model= List[Post])
+# @router.get("/", response_model= List[Post])
+@router.get("/", response_model= List[PostOut])
 def get_posts(db : Session = Depends(get_db), current_user: int = Depends(get_current_user), limit: int = 10, skip: int = 0, search: Optional[str] = ""):
     # cursor.execute(
     #     """SELECT * FROM posts"""
@@ -20,8 +22,11 @@ def get_posts(db : Session = Depends(get_db), current_user: int = Depends(get_cu
 
     # TO fetch all posts for a specific user
     # posts = db.query(models.Post).filter(current_user.id == models.Post.owner_id).all()
-    print(search)
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    # print(search)
+    # posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    posts = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter= True).group_by(models.Post.id).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    # results = list(map(lambda x :x._mapping, results))
+    # print(results)
     return posts
 
 
@@ -40,12 +45,16 @@ def create_post(post: PostCreate, db : Session = Depends(get_db), current_user: 
     db.refresh(new_post)
     return new_post
 
-@router.get("/{id}", response_model= Post)
+# @router.get("/{id}", response_model= Post)
+@router.get("/{id}", response_model= PostOut)
 def get_post(id: int, db : Session = Depends(get_db), current_user: int = Depends(get_current_user)):
     # cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
     # fetched_post_data = cursor.fetchone()
 
-    fetched_post_data = db.query(models.Post).filter(models.Post.id == id).first()
+    # fetched_post_data = db.query(models.Post).filter(models.Post.id == id).first()
+
+    fetched_post_data = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Post.id == models.Vote.post_id,isouter= True).group_by(models.Post.id).filter(models.Post.id == id).first()
+    # print(fetched_post_data)
     if not fetched_post_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
