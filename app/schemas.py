@@ -1,11 +1,11 @@
 from enum import Enum
 from typing import Annotated, Optional
 from annotated_types import Interval
-from pydantic import BaseModel, EmailStr, conint
+from pydantic import BaseModel, EmailStr, Field, conint
 from datetime import datetime
 from pydantic.types import conint
 
-Dir = Annotated[int, Interval(ge=0, le=1)]
+# Dir = Annotated[int, Interval(ge=0, le=1)]
 
 class PostBase(BaseModel):
     title: str
@@ -62,5 +62,5 @@ class TokenData(BaseModel):
 
 class Vote(BaseModel):
     post_id: int
-    dir: Dir
+    dir: Annotated[int, Field(strict=True, ge=0,le=1)]
     # dir: Direction
