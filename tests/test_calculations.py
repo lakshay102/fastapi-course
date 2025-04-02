@@ -1,4 +1,4 @@
-from app.calculations import BankAccount, add, divide, multiply, subtract
+from app.calculations import BankAccount, InsufficientFunds, add, divide, multiply, subtract
 import pytest
 
 @pytest.fixture()
@@ -57,7 +57,7 @@ def test_bank_withdraw_amount(bank_account):
 def test_bank_collect_interest(bank_account):
     # bank_account = BankAccount(100)
     bank_account.collect_interest()
-    assert round(bank_account.balance) == 55
+    assert round(bank_account.balance, 6) == 55
 
 
 @pytest.mark.parametrize("deposited, withdrew, expected",[
@@ -70,3 +70,7 @@ def test_bank_transaction(zero_balance_bank_account,deposited,withdrew,expected)
     zero_balance_bank_account.collect_interest()
     zero_balance_bank_account.withdraw(withdrew)
     assert round(zero_balance_bank_account.balance) == expected
+
+def test_insufficient_funds(bank_account):
+    with pytest.raises(InsufficientFunds):
+      bank_account.withdraw(200)
